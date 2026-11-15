@@ -900,7 +900,7 @@ fn the_0_2_keys_are_refused_under_0_1_and_checked_under_0_2() {
         ),
         (
             format!("{SMALLEST_0_2}[entity]\nfile = \"e.wgsl\"\nclouds = false\n"),
-            "`clouds`, `sun` and `stars` are keys of [sky] only",
+            "`clouds`, `sun`, `stars` and `sun_path_rotation` are keys of [sky] only",
         ),
         (
             format!("{SMALLEST_0_2}[entity]\nfile = \"e.glsl\"\n"),
