@@ -8,7 +8,7 @@ hardness/tool rules, collect drops from the block loot tables, place blocks,
 craft in the 2x2 inventory grid or on a crafting table, and save and reload worlds
 in vanilla's Anvil format.
 
-**Status:** playable; players get it through [the launcher](../launcher/README.md). The [harness table](../README.md#project-status)
+**Status:** playable; players get it through [the launcher](../launcher/README.md). The [harness table](status.md#what-the-harnesses-compare)
 in the README scores each subsystem against vanilla and lists what is still
 missing; [Rust rewrite status](rust-parity.md) has the details.
 
@@ -61,11 +61,11 @@ glibc. An absent musl archive is not a reason to install the glibc archive on a 
 
 ## Run from a checkout
 
-Use current stable Rust (1.90+) and JDK 25 (Python 3.10+ only for the development
+Use current stable Rust (1.90+) and JDK 25 (Python 3.11+ only for the development
 harnesses). A checkout never
 downloads the game: resource preparation imports **your own copy** (the 26.3
 client from your official launcher install, and the 26.3 server jar you
-downloaded yourself; see [Build from source](../README.md#build-from-source)),
+downloaded yourself; see [Build from source](#run-from-a-checkout)),
 verifies it against the pinned checksums, runs vanilla's data generator and small
 exporters against those jars, and extracts the jar's assets and data into ignored
 `.local/horizon-client/26.3/`. Sounds (about 380 MB) are copied from your

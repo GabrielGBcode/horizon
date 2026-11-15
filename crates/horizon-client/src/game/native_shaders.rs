@@ -12,7 +12,7 @@ use std::{
 };
 
 use horizon_client::text::Text;
-use horizon_shader_api::{Api, Blend, Manifest, Pack, Primaries, check};
+use horizon_shader_api::{Api, Manifest, Pack, Primaries, check};
 
 use super::Game;
 
@@ -198,9 +198,9 @@ impl Game<'_> {
     }
 }
 
-/// Why the game doesn't draw a pack the check may still pass: what it asks of shader API 0.2
-/// (docs/design/hdr-linear-light.md, steps 3 and 4) isn't served yet. 0.2 itself is drawn
-/// under `HORIZON_HDR_FRAME=float` (`switch`).
+/// Why the game doesn't draw a pack the check may still pass: `[frame] primaries = "bt2020"`
+/// isn't served yet (#14584), and shader API 0.2 is drawn only under `HORIZON_HDR_FRAME=float`
+/// (`switch`).
 fn not_drawn(m: &Manifest, switch: bool) -> Option<String> {
     if m.primaries == Primaries::Bt2020 {
         return Some(
@@ -208,9 +208,20 @@ fn not_drawn(m: &Manifest, switch: bool) -> Option<String> {
                 .into(),
         );
     }
-    if m.blend == Blend::Linear {
+    if m.entity.is_some() {
+        return Some("the [entity] stage isn't drawn yet: leave it out".into());
+    }
+    if m.motion.is_some() {
         return Some(
-            "[frame] blend = \"linear\" isn't served yet: leave it out, or set \"gamma\"".into(),
+            "[motion] needs a later Horizon: this one checks the motion guide but doesn't draw it"
+                .into(),
+        );
+    }
+    if m.computes() {
+        return Some(
+            "[[resource]] and compute [[post]] entries need a later Horizon: \
+             this one checks them but doesn't run them"
+                .into(),
         );
     }
     (m.api != Api::V0_1 && !switch).then(|| {
@@ -358,22 +369,31 @@ mod tests {
     fn shader_api_0_2_is_drawn_only_under_the_switch() {
         for switch in [false, true] {
             assert_eq!(not_drawn(&manifest("0.1", ""), switch), None);
-            let why = not_drawn(&manifest("0.2", "[frame]\nblend = \"linear\"\n"), switch);
-            assert!(why.unwrap().contains("blend = \"linear\" isn't served yet"));
             let wide = "[frame]\nblend = \"linear\"\nprimaries = \"bt2020\"\n";
             let why = not_drawn(&manifest("0.2", wide), switch).unwrap();
             assert!(
                 why.contains("primaries = \"bt2020\" isn't served yet"),
                 "{why}"
             );
+            let why = not_drawn(&manifest("0.2", "[entity]\nfile = \"e.wgsl\"\n"), switch);
+            assert!(why.unwrap().contains("[entity] stage isn't drawn yet"));
+            let why = not_drawn(&manifest("0.2", "[motion]\n"), switch).unwrap();
+            assert!(why.contains("[motion] needs a later Horizon"), "{why}");
+            let kept =
+                "[[resource]]\nname = \"cache\"\nbuffer = 64\nelement = \"u32\"\nkeep = \"view\"\n";
+            let why = not_drawn(&manifest("0.2", kept), switch).unwrap();
+            assert!(why.contains("need a later Horizon"), "{why}");
             let named = manifest("0.2", "[frame]\nprimaries = \"bt709\"\n");
             assert_eq!(not_drawn(&named, true), None);
         }
-        let why = not_drawn(&manifest("0.2", ""), false).unwrap();
-        assert!(
-            why.contains("drawn only under HORIZON_HDR_FRAME=float"),
-            "{why}"
-        );
-        assert_eq!(not_drawn(&manifest("0.2", ""), true), None);
+        // Either blend: `"linear"` is drawn as `"gamma"` is.
+        for frame in ["", "[frame]\nblend = \"linear\"\n"] {
+            let why = not_drawn(&manifest("0.2", frame), false).unwrap();
+            assert!(
+                why.contains("drawn only under HORIZON_HDR_FRAME=float"),
+                "{why}"
+            );
+            assert_eq!(not_drawn(&manifest("0.2", frame), true), None, "{frame}");
+        }
     }
 }
